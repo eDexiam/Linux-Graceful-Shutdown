@@ -1,12 +1,14 @@
 package xyz.dexiam;
 
-import com.formdev.flatlaf.FlatLightLaf;
-
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 public class main {
@@ -16,6 +18,8 @@ public class main {
     private JPanel actionButtons;
     private JButton shutdownAnywayButton;
     private JButton cancelButton;
+    private JPanel runningProgramsPanel;
+    private JLabel programText;
 
     private static final main mainGui = new main();
     private static final JFrame frame = new JFrame("Shutdown process");
@@ -35,15 +39,6 @@ public class main {
 
     public static void main(String[] args) {
 
-        FlatLightLaf.install();
-
-        try {
-            UIManager.setLookAndFeel( new FlatLightLaf() );
-        } catch( Exception ex ) {
-            System.err.println( "Failed to initialize LaF" );
-        }
-
-
         System.setProperty("awt.useSystemAAFontSettings","on");
         System.setProperty("swing.aatext", "true");
 
@@ -56,7 +51,21 @@ public class main {
         frame.setUndecorated(true);
         frame.setBackground(new Color(180, 180, 180, 100));
 
-        //mainGui.actionButtons.add(new JLabel("Hi"));
+        StringBuilder string = new StringBuilder();
+
+        string.append("<html>");
+
+        string.append("Programs open: <br><br>");
+
+        for(String data : processNames()) {
+            string.append(data + "<br><br>");
+            //JLabel programName = new JLabel(data, SwingConstants.CENTER);
+            //mainGui.runningProgramsPanel.add(programName);
+        }
+
+        string.append("</html>");
+
+        mainGui.programText.setText(string.toString());
 
         System.out.println(getAllComponents(frame).toString());
 
@@ -77,4 +86,42 @@ public class main {
         }
         return compList;
     }
+
+    private static List<String> processNames() {
+        ProcessBuilder builder = new ProcessBuilder();
+
+        builder.command("bash", "-c", "wmctrl -l");
+
+        try {
+            Process process = builder.start();
+
+            StringBuilder output = new StringBuilder();
+
+            BufferedReader read = new BufferedReader(new InputStreamReader(process.getInputStream()));
+            String line;
+
+            while((line = read.readLine()) != null) {
+                output.append(line + "\n");
+            }
+
+            int exitCode = process.waitFor();
+
+            if(exitCode == 0) {
+                System.out.println("Getting of processes successful! Exit code: " + exitCode);
+                System.out.println(output);
+            } else {
+                System.out.println("Command failed! Exit code: " + exitCode);
+            }
+
+            List<String> processesRunning = new ArrayList<>();
+            processesRunning = Arrays.asList(output.toString().split("/\n/gm"));
+
+            return(processesRunning);
+        } catch (IOException | InterruptedException e) {
+            e.printStackTrace();
+        }
+
+        return null;
+    }
+
 }
